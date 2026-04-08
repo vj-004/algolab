@@ -5,6 +5,7 @@ import { userRoles } from '@/constants'
 import { Button } from '@/components/ui/button'
 import { SignInButton, SignUpButton, UserButton } from '@clerk/nextjs'
 import { currentUser } from '@clerk/nextjs/server'
+import Image from 'next/image'
 
 const navLinks = [
   { label: 'Problems', href: '/problems' },
@@ -14,15 +15,14 @@ const navLinks = [
 
 const Navbar = async ({ userRole }) => {
 
-    const user = await currentUser();
-    console.log('user: ', user);
+  const user = await currentUser();
 
   return (
     <header className='w-full border-b border-neutral-200 bg-transparent backdrop-blur-xs'>
       <div className='mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4'>
-        <Link href='/' className='flex items-center gap-3'>
-          <div className='h-9 w-9 rounded-lg border border-neutral-300 bg-neutral-100' />
-          <span className='text-sm font-semibold text-neutral-800'>App Name</span>
+        <Link href='/' className='flex items-center '>
+          <Image src={'/algolab_tp.png'} alt='logo' width={120} height={60} />
+          <span className='text-2xl font-semibold font-mono text-neutral-800 -ml-8'>Algo<span className='text-blue-700'>Lab</span></span>
         </Link>
 
         <nav className='flex items-center gap-5 text-sm font-medium text-neutral-600'>
