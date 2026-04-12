@@ -54,8 +54,8 @@ const Navbar = async ({ userRole }) => {
 
           <div className='flex items-center gap-4'>
             {user && userRole === userRoles.ADMIN && (
-              <Button size='sm' variant='outline'>
-                Create Problem
+              <Button asChild size='sm' variant='outline'>
+                <Link href='/create-problem'>Create Problem</Link>
               </Button>
             )}
 
