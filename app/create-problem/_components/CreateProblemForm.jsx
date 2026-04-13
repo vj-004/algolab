@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { z } from 'zod';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -13,28 +14,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 
+const createTestCaseBlock = () => ({
+  input: '',
+  output: '',
+  explanation: '',
+});
+
 const initialFormState = {
   title: '',
   difficulty: 'EASY',
   tags: '',
   description: '',
+  inputFormat: '',
+  outputFormat: '',
   constraints: '',
-  examples: `[
-  {
-    "input": "nums = [2,7,11,15], target = 9",
-    "output": "[0,1]",
-    "explanation": "Because nums[0] + nums[1] equals 9."
-  }
-]`,
-  testCases: `[
-  {
-    "input": {
-      "nums": [2, 7, 11, 15],
-      "target": 9
+  testCaseBlocks: [
+    {
+      input: '5\n1 2 3 4 5',
+      output: '15',
+      explanation: 'Sum all numbers from the second line.',
     },
-    "expected": [0, 1]
-  }
-]`,
+  ],
   codeSnippets: `{
   "javascript": "function solve(input) {\\n  // write code here\\n}",
   "python": "def solve(input):\\n    pass",
@@ -94,9 +94,18 @@ const formSchema = z.object({
     .min(1, 'At least one tag is required.')
     .refine((value) => value.split(',').map((tag) => tag.trim()).filter(Boolean).length > 0, 'At least one valid tag is required.'),
   description: z.string().trim().min(20, 'Description should be at least 20 characters.'),
+  inputFormat: z.string().trim().min(10, 'Input format should be at least 10 characters.'),
+  outputFormat: z.string().trim().min(10, 'Output format should be at least 10 characters.'),
   constraints: z.string().trim().min(5, 'Constraints are required.'),
-  examples: jsonArrayString('Examples must be a valid JSON array.'),
-  testCases: jsonArrayString('Test cases must be a valid JSON array.'),
+  testCaseBlocks: z
+    .array(
+      z.object({
+        input: z.string().trim().min(1, 'Input is required.'),
+        output: z.string().trim().min(1, 'Output is required.'),
+        explanation: z.string().trim().min(1, 'Explanation is required.'),
+      })
+    )
+    .min(1, 'At least one test case block is required.'),
   codeSnippets: jsonObjectString('Code snippets must be a valid JSON object.'),
   referenceSolution: jsonObjectString('Reference solution must be a valid JSON object.'),
   hints: z.string().optional(),
@@ -161,17 +170,74 @@ const CreateProblemForm = () => {
     }));
   };
 
+  const updateTestCaseBlock = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      testCaseBlocks: prev.testCaseBlocks.map((testCase, testCaseIndex) =>
+        testCaseIndex === index ? { ...testCase, [field]: value } : testCase
+      ),
+    }));
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      testCaseBlocks: undefined,
+    }));
+  };
+
+  const addTestCaseBlock = () => {
+    setFormData((prev) => ({
+      ...prev,
+      testCaseBlocks: [...prev.testCaseBlocks, createTestCaseBlock()],
+    }));
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      testCaseBlocks: undefined,
+    }));
+  };
+
+  const removeTestCaseBlock = (index) => {
+    setFormData((prev) => {
+      if (prev.testCaseBlocks.length === 1) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        testCaseBlocks: prev.testCaseBlocks.filter((_, testCaseIndex) => testCaseIndex !== index),
+      };
+    });
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      testCaseBlocks: undefined,
+    }));
+  };
+
   const buildPayload = (values) => {
     const parsedReferenceSolution = parseJson(values.referenceSolution);
+    const examples = values.testCaseBlocks.map((testCase) => ({
+      input: testCase.input.trim(),
+      output: testCase.output.trim(),
+      explanation: testCase.explanation.trim(),
+    }));
+    const testCases = values.testCaseBlocks.map((testCase) => ({
+      input: testCase.input.trim(),
+      expected: testCase.output.trim(),
+    }));
 
     return {
       title: values.title.trim(),
       description: values.description.trim(),
       difficulty: values.difficulty,
       tags: values.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-      examples: parseJson(values.examples),
-      constraints: values.constraints.trim(),
-      testCases: parseJson(values.testCases),
+      examples,
+      constraints: [
+        `Input Format:\n${values.inputFormat.trim()}`,
+        `Output Format:\n${values.outputFormat.trim()}`,
+        `Constraints:\n${values.constraints.trim()}`,
+      ].join('\n\n'),
+      testCases,
       codeSnippets: parseJson(values.codeSnippets),
       referenceSolution: parsedReferenceSolution,
       hints: values.hints?.trim() || null,
@@ -180,6 +246,7 @@ const CreateProblemForm = () => {
   };
 
   const getFieldError = (field) => fieldErrors[field];
+  const hasTestCaseErrors = Boolean(getFieldError('testCaseBlocks'));
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -300,6 +367,36 @@ const CreateProblemForm = () => {
             {getFieldError('description') && <p className='text-xs text-red-600'>{getFieldError('description')}</p>}
           </div>
 
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='space-y-2'>
+              <Label htmlFor='inputFormat'>Input Format</Label>
+              <Textarea
+                id='inputFormat'
+                value={formData.inputFormat}
+                onChange={updateField('inputFormat')}
+                rows={5}
+                className='resize-y bg-white'
+                placeholder='Describe input in a Codeforces style format. Example: The first line contains n. The second line contains n integers.'
+                aria-invalid={Boolean(getFieldError('inputFormat'))}
+              />
+              {getFieldError('inputFormat') && <p className='text-xs text-red-600'>{getFieldError('inputFormat')}</p>}
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='outputFormat'>Output Format</Label>
+              <Textarea
+                id='outputFormat'
+                value={formData.outputFormat}
+                onChange={updateField('outputFormat')}
+                rows={5}
+                className='resize-y bg-white'
+                placeholder='Describe output in a Codeforces style format. Example: Print one integer - the minimum number of operations.'
+                aria-invalid={Boolean(getFieldError('outputFormat'))}
+              />
+              {getFieldError('outputFormat') && <p className='text-xs text-red-600'>{getFieldError('outputFormat')}</p>}
+            </div>
+          </div>
+
           <div className='space-y-2'>
             <Label htmlFor='constraints'>Constraints</Label>
             <Textarea
@@ -318,31 +415,74 @@ const CreateProblemForm = () => {
 
           <div className='grid grid-cols-1 gap-4'>
             <div className='space-y-2'>
-              <Label htmlFor='examples'>Examples (JSON array)</Label>
-              <Textarea
-                id='examples'
-                value={formData.examples}
-                onChange={updateField('examples')}
-                rows={8}
-                spellCheck={false}
-                className='resize-y bg-neutral-50 font-mono text-xs md:text-sm'
-                aria-invalid={Boolean(getFieldError('examples'))}
-              />
-              {getFieldError('examples') && <p className='text-xs text-red-600'>{getFieldError('examples')}</p>}
-            </div>
+              <div className='flex items-center justify-between gap-3'>
+                <Label>Test Cases</Label>
+                <Button type='button' variant='outline' size='sm' onClick={addTestCaseBlock}>
+                  <Plus className='size-4' />
+                  Add Testcase
+                </Button>
+              </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='testCases'>Test Cases (JSON array)</Label>
-              <Textarea
-                id='testCases'
-                value={formData.testCases}
-                onChange={updateField('testCases')}
-                rows={8}
-                spellCheck={false}
-                className='resize-y bg-neutral-50 font-mono text-xs md:text-sm'
-                aria-invalid={Boolean(getFieldError('testCases'))}
-              />
-              {getFieldError('testCases') && <p className='text-xs text-red-600'>{getFieldError('testCases')}</p>}
+              <div className='space-y-3'>
+                {formData.testCaseBlocks.map((testCase, index) => (
+                  <div key={`test-case-${index}`} className='space-y-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4'>
+                    <div className='flex items-center justify-between'>
+                      <p className='text-sm font-medium text-neutral-800'>Case {index + 1}</p>
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => removeTestCaseBlock(index)}
+                        disabled={formData.testCaseBlocks.length === 1}
+                      >
+                        <Trash2 className='size-4' />
+                        Remove
+                      </Button>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor={`test-case-input-${index}`}>Input</Label>
+                      <Textarea
+                        id={`test-case-input-${index}`}
+                        value={testCase.input}
+                        onChange={(event) => updateTestCaseBlock(index, 'input', event.target.value)}
+                        rows={4}
+                        className='resize-y bg-white font-mono text-xs md:text-sm'
+                        placeholder='Write raw input exactly as the judge would provide it.'
+                        aria-invalid={hasTestCaseErrors}
+                      />
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor={`test-case-output-${index}`}>Output</Label>
+                      <Textarea
+                        id={`test-case-output-${index}`}
+                        value={testCase.output}
+                        onChange={(event) => updateTestCaseBlock(index, 'output', event.target.value)}
+                        rows={3}
+                        className='resize-y bg-white font-mono text-xs md:text-sm'
+                        placeholder='Expected output for this input.'
+                        aria-invalid={hasTestCaseErrors}
+                      />
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor={`test-case-explanation-${index}`}>Explanation</Label>
+                      <Textarea
+                        id={`test-case-explanation-${index}`}
+                        value={testCase.explanation}
+                        onChange={(event) => updateTestCaseBlock(index, 'explanation', event.target.value)}
+                        rows={3}
+                        className='resize-y bg-white'
+                        placeholder='Explain how this output is derived from the input.'
+                        aria-invalid={hasTestCaseErrors}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {getFieldError('testCaseBlocks') && <p className='text-xs text-red-600'>{getFieldError('testCaseBlocks')}</p>}
             </div>
 
             <div className='space-y-2'>

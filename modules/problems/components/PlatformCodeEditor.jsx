@@ -164,10 +164,16 @@ const PlatformCodeEditor = ({
   return (
     <section
       className={`mx-auto flex w-full flex-1 flex-col gap-4 p-4 transition-all duration-300 md:gap-6 md:p-6 ${
-        embedded ? 'max-w-none p-0 md:p-0' : isExpanded ? 'max-w-7xl' : 'max-w-5xl'
+        embedded ? 'h-full min-h-0 max-w-none gap-0 p-0 md:p-0' : isExpanded ? 'max-w-7xl' : 'max-w-5xl'
       }`}
     >
-      <Card className='min-h-140 rounded-3xl border border-neutral-200 bg-white/95 ring-0'>
+      <Card
+        className={`min-h-0 ${
+          embedded
+            ? 'h-full gap-0 rounded-2xl border border-neutral-200 bg-white/95 ring-0'
+            : 'min-h-140 rounded-3xl border border-neutral-200 bg-white/95 ring-0'
+        }`}
+      >
         <CardHeader className='border-b border-neutral-200/80 py-4'>
           <div className='flex w-full flex-wrap items-end gap-3'>
             <div className='min-w-44 flex-1 space-y-2'>
@@ -247,7 +253,7 @@ const PlatformCodeEditor = ({
           </div>
         </CardHeader>
 
-        <CardContent className='h-230 p-0'>
+        <CardContent className={`min-h-0 p-0 ${embedded ? 'flex-1' : 'h-230'}`}>
           <Editor
             height='100%'
             language={monacoLanguage}

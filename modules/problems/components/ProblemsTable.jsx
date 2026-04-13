@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -237,20 +238,24 @@ const ProblemsTable = ({ problems = [], isAdmin = false, onDeleteProblem }) => {
                 return (
                   <tr
                     key={problem.id}
-                    className='border-t border-neutral-100 align-top transition-colors hover:bg-neutral-50/80'
+                    className='border-t border-neutral-100 align-middle transition-colors hover:bg-neutral-50/80'
                   >
-                    <td className='px-4 py-3'>
-                      <p className='max-w-80 truncate font-medium text-neutral-900 text-wrap' title={problem.title}>
+                    <td className='px-4 py-3 align-middle'>
+                      <Link
+                        href={`/problem/${problem.id}`}
+                        title={problem.title}
+                        className='block max-w-80 truncate rounded-md font-bold text-neutral-900 underline-offset-4 transition-all hover:text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70'
+                      >
                         {problem.title}
-                      </p>
+                      </Link>
                       {/* <p className='mt-1 line-clamp-2 text-sm text-neutral-600'>{problem.description}</p> */}
                     </td>
-                    <td className='px-4 py-3'>
+                    <td className='px-4 py-3 align-middle'>
                       <Badge variant={getDifficultyBadgeVariant(problem.difficulty)}>
                         {titleCase(problem.difficulty)}
                       </Badge>
                     </td>
-                    <td className='px-4 py-3'>
+                    <td className='px-4 py-3 align-middle'>
                       <div className='flex flex-wrap gap-1.5'>
                         {(problem.tags ?? []).slice(0, 3).map((tag) => (
                           <Badge key={tag} variant='outline'>
@@ -263,10 +268,10 @@ const ProblemsTable = ({ problems = [], isAdmin = false, onDeleteProblem }) => {
                       </div>
                     </td>
                     {isAdmin && (
-                      <td className='px-4 py-3'>
+                      <td className='px-4 py-3 align-middle'>
                         <Button
                           variant='destructive'
-                          size='sm'
+                          size='xs'
                           onClick={() => handleDelete(problem.id)}
                           disabled={isPending && deletingId === problem.id}
                         >

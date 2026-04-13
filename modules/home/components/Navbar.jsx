@@ -8,6 +8,7 @@ import { currentUser } from '@clerk/nextjs/server'
 import Image from 'next/image'
 
 const navLinks = [
+  { label: 'Interview', href: '/interview' },
   { label: 'Problems', href: '/problems' },
   { label: 'About', href: '/about' },
   { label: 'Profile', href: '/profile' },
